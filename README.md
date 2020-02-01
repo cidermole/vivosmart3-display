@@ -1,4 +1,4 @@
-# TL;DR: Garmin Vivosmart 3 LCD Display driver
+# Garmin Vivosmart 3 LCD Display driver
 
 Bit-banging LCD display driver in Python for the Garmin Vivosmart 3 LCD. 
 This is a proof-of-concept for the pyboard v1.1 which has an STM32 
@@ -53,14 +53,40 @@ Label | Pin | Pin | Label
 1.04 V floating | 11 | 14 | 0.23 V floating
 200 µs end pulse | 10 | 15 | 5 V
 100 µs period rect: row | 9 | 16 | 100 µs begin pulse
-chip select | 8 | 17 | 50 µs period rect: 40% duty cycle
+chip select | 8 | 17 | 50 µs period rect: 40% duty cycle (not critical; maybe some PWM)
 60 Hz rect | 7 | 18 | 60 Hz rect, opposite phase to pin 7
 GND | 6 | 19 | 3.2 V
-1.2 MHz clock | 5 | 20 | hairpin impulses every 50 µs
-data | 4 | 21 | data
-data | 3 | 22 | data
-data | 2 | 23 | data
-60 Hz rect, in phase with pin 18 | 1 | 24 | hairpin impulses every 50 µs
+1.2 MHz clock | 5 | 20 | hsync_start (hairpin impulses every 50 µs at the row start)
+data (red on odd pixels) | 4 | 21 | data (red on even pixels)
+data (green on odd pixels) | 3 | 22 | data (green on even pixels)
+data (blue on odd pixels) | 2 | 23 | data (blue on even pixels)
+60 Hz rect, in phase with pin 18 | 1 | 24 | hsync_end (hairpin impulses every 50 µs at the row end)
+
+Screen resolution is 240x240 pixels. Data is transferred both on rising and falling clock edges. The transfer pattern is blocks of 4 horizontal pixels each. For every row, there are two transfers, first the LSB and then the MSB bits. For complete details, see the comments in `lcd_v3.py`, excerpted here:
+
+```
+# # Transfer pattern
+#
+# 4 horizontal pixels  x  2 vertical pixels block:
+#
+# ```
+# {[P_hf T_i] [P_lf T_i] [P_hr T_i] [P_lr T_i]}
+# {[P_hf T_o] [P_lf T_o] [P_hr T_o] [P_lr T_o]}
+#
+# T_i is transfer slots [1,0]
+# T_o is transfer slots [3,2]
+#
+# P_ab
+# a: h for pins 21,22,23, l for pins 2,3,4
+# b: f for falling edge, r for rising edge
+# ```
+#
+# Each transfer_frame transfers one row's (LSB or MSB) for the entire screen. 
+# Each full clock cycle, 4 pixels in {} are transmitted.
+#
+# After all T_i slots (2 x 61 clks in transfer_frame) of even row,
+# the odd row is transmitted with T_o slots (again 2 x 61 clks in transfer_frame).
+```
 
 ## Decoding data bits
 
