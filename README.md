@@ -4,6 +4,8 @@ Bit-banging LCD display driver in Python for the Garmin Vivosmart 3 LCD.
 This is a proof-of-concept for the pyboard v1.1 which has an STM32 
 without FSMC. Hence, it uses bit-banging to drive the display.
 
+In fact, despite being written for Micropython, the driver itself is mostly in ARM assembly. See `lcd_v3.py` for details.
+
 ![Vivosmart 3 display](img/display.jpg)
 
 ## Usage
